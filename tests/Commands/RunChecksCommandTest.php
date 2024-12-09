@@ -1,7 +1,6 @@
 <?php
 
 use Illuminate\Support\Facades\Notification;
-use function Pest\Laravel\artisan;
 use Spatie\Health\Commands\RunHealthChecksCommand;
 use Spatie\Health\Enums\Status;
 use Spatie\Health\Facades\Health;
@@ -9,6 +8,8 @@ use Spatie\Health\Models\HealthCheckResultHistoryItem;
 use Spatie\Health\Notifications\CheckFailedNotification;
 use Spatie\Health\Tests\TestClasses\CrashingCheck;
 use Spatie\Health\Tests\TestClasses\FakeUsedDiskSpaceCheck;
+
+use function Pest\Laravel\artisan;
 
 beforeEach(function () {
     $this->fakeDiskSpaceCheck = FakeUsedDiskSpaceCheck::new();
@@ -45,7 +46,7 @@ it('will send a notification when a checks fails', function () {
     $this->fakeDiskSpaceCheck->fakeDiskUsagePercentage(100);
     artisan(RunHealthChecksCommand::class)->assertSuccessful();
 
-    Notification::assertTimesSent(1, CheckFailedNotification::class);
+    Notification::assertSentTimes(CheckFailedNotification::class, 1);
 });
 
 it('has an option that will prevent notifications being sent', function () {
@@ -54,7 +55,7 @@ it('has an option that will prevent notifications being sent', function () {
     $this->fakeDiskSpaceCheck->fakeDiskUsagePercentage(100);
     artisan('health:check --no-notification')->assertSuccessful();
 
-    Notification::assertTimesSent(0, CheckFailedNotification::class);
+    Notification::assertSentTimes(CheckFailedNotification::class, 0);
 });
 
 it('can store the with warnings results in the database', function () {
@@ -95,8 +96,8 @@ it('can store the with failures results in the database', function () {
 
 it('will still run checks when there is a failing one', function () {
     Health::clearChecks()->checks([
-        new CrashingCheck(),
-        new FakeUsedDiskSpaceCheck(),
+        new CrashingCheck,
+        new FakeUsedDiskSpaceCheck,
     ]);
 
     artisan(RunHealthChecksCommand::class)

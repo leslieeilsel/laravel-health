@@ -2,9 +2,10 @@
 
 namespace Spatie\Health\Checks\Checks;
 
-use function app;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
+
+use function app;
 
 class EnvironmentCheck extends Check
 {
@@ -19,7 +20,7 @@ class EnvironmentCheck extends Check
 
     public function run(): Result
     {
-        $actualEnvironment = (string)app()->environment();
+        $actualEnvironment = (string) app()->environment();
 
         $result = Result::make()
             ->meta([
@@ -30,6 +31,6 @@ class EnvironmentCheck extends Check
 
         return $this->expectedEnvironment === $actualEnvironment
             ? $result->ok()
-            : $result->failed("The environment was expected to be `:expected`, but actually was `:actual`");
+            : $result->failed('The environment was expected to be `:expected`, but actually was `:actual`');
     }
 }

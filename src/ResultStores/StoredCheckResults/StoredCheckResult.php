@@ -5,14 +5,7 @@ namespace Spatie\Health\ResultStores\StoredCheckResults;
 class StoredCheckResult
 {
     /**
-     * @param string $name
-     * @param string $label
-     * @param string $notificationMessage
-     * @param string $shortSummary
-     * @param string $status
-     * @param array<string, mixed> $meta
-     *
-     * @return self
+     * @param  array<string, mixed>  $meta
      */
     public static function make(
         string $name,
@@ -20,17 +13,13 @@ class StoredCheckResult
         string $notificationMessage = '',
         string $shortSummary = '',
         string $status = '',
-        array  $meta = [],
+        array $meta = [],
     ): self {
         return new self(...func_get_args());
     }
 
     /**
-     * @param string $name
-     * @param string $notificationMessage
-     * @param string $shortSummary
-     * @param string $status
-     * @param array<string, mixed> $meta
+     * @param  array<string, mixed>  $meta
      */
     public function __construct(
         public string $name,
@@ -38,9 +27,8 @@ class StoredCheckResult
         public string $notificationMessage = '',
         public string $shortSummary = '',
         public string $status = '',
-        public array  $meta = [],
-    ) {
-    }
+        public array $meta = [],
+    ) {}
 
     public function notificationMessage(string $message): self
     {
@@ -64,8 +52,7 @@ class StoredCheckResult
     }
 
     /**
-     * @param array<string, mixed> $meta
-     *
+     * @param  array<string, mixed>  $meta
      * @return $this
      */
     public function meta(array $meta): self

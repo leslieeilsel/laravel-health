@@ -1,5 +1,7 @@
 <html lang="en" class="{{$theme == 'dark' ? 'dark' : ''}}">
 <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>{{ __('health::notifications.health_results') }}</title>
     <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
     {{$assets}}
@@ -18,7 +20,7 @@
                 </div>
             @endif
         </div>
-        <div class="px-2 mt-6 md:mt-8 md:px-0">
+        <div class="px-2 my-6 md:mt-8 md:px-0">
             @if (count($checkResults?->storedCheckResults ?? []))
                 <dl class=" grid grid-cols-1 gap-2.5 sm:gap-3 md:gap-5 md:grid-cols-2 lg:grid-cols-3">
                     @foreach ($checkResults->storedCheckResults as $result)

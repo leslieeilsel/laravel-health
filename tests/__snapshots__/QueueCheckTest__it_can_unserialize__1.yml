@@ -1,0 +1,8 @@
+cacheStoreName: array
+queues:
+    - sync
+label: Queue
+name: Queue
+runConditions:
+    - true
+    - {  }

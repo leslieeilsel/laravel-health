@@ -1,7 +1,6 @@
 <?php
 
 return [
-
     /*
      * A result store is responsible for saving the results of the checks. The
      * `EloquentHealthResultStore` will save results in the database. You
@@ -9,6 +8,7 @@ return [
      */
     'result_stores' => [
         Spatie\Health\ResultStores\EloquentHealthResultStore::class => [
+            'connection' => env('HEALTH_DB_CONNECTION', env('DB_CONNECTION')),
             'model' => Spatie\Health\Models\HealthCheckResultHistoryItem::class,
             'keep_history_for_days' => 5,
         ],
@@ -55,6 +55,7 @@ return [
          * only get one notification per hour.
          */
         'throttle_notifications_for_minutes' => 60,
+        'throttle_notifications_key' => 'health:latestNotificationSentAt:',
 
         'mail' => [
             'to' => 'your@example.com',
@@ -66,7 +67,7 @@ return [
         ],
 
         'slack' => [
-            'webhook_url' => config('logging.channels.slack.url', ''),
+            'webhook_url' => env('HEALTH_SLACK_WEBHOOK_URL', ''),
 
             /*
              * If this is set to null the default channel of the webhook will be used.
@@ -111,4 +112,16 @@ return [
      * - dark: dark mode
      */
     'theme' => 'light',
+
+    /*
+     * When enabled,  completed `HealthQueueJob`s will be displayed
+     * in Horizon's silenced jobs screen.
+     */
+    'silence_health_queue_job' => true,
+
+    /*
+     * The response code to use for HealthCheckJsonResultsController when a health
+     * check has failed
+     */
+    'json_results_failure_status' => 200,
 ];

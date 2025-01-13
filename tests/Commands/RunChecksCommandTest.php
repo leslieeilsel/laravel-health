@@ -1,7 +1,8 @@
 <?php
 
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Notification;
-use function Pest\Laravel\artisan;
+use Spatie\Health\Commands\PauseHealthChecksCommand;
 use Spatie\Health\Commands\RunHealthChecksCommand;
 use Spatie\Health\Enums\Status;
 use Spatie\Health\Facades\Health;
@@ -9,6 +10,8 @@ use Spatie\Health\Models\HealthCheckResultHistoryItem;
 use Spatie\Health\Notifications\CheckFailedNotification;
 use Spatie\Health\Tests\TestClasses\CrashingCheck;
 use Spatie\Health\Tests\TestClasses\FakeUsedDiskSpaceCheck;
+
+use function Pest\Laravel\artisan;
 
 beforeEach(function () {
     $this->fakeDiskSpaceCheck = FakeUsedDiskSpaceCheck::new();
@@ -45,7 +48,7 @@ it('will send a notification when a checks fails', function () {
     $this->fakeDiskSpaceCheck->fakeDiskUsagePercentage(100);
     artisan(RunHealthChecksCommand::class)->assertSuccessful();
 
-    Notification::assertTimesSent(1, CheckFailedNotification::class);
+    Notification::assertSentTimes(CheckFailedNotification::class, 1);
 });
 
 it('has an option that will prevent notifications being sent', function () {
@@ -54,7 +57,7 @@ it('has an option that will prevent notifications being sent', function () {
     $this->fakeDiskSpaceCheck->fakeDiskUsagePercentage(100);
     artisan('health:check --no-notification')->assertSuccessful();
 
-    Notification::assertTimesSent(0, CheckFailedNotification::class);
+    Notification::assertSentTimes(CheckFailedNotification::class, 0);
 });
 
 it('can store the with warnings results in the database', function () {
@@ -95,8 +98,8 @@ it('can store the with failures results in the database', function () {
 
 it('will still run checks when there is a failing one', function () {
     Health::clearChecks()->checks([
-        new CrashingCheck(),
-        new FakeUsedDiskSpaceCheck(),
+        new CrashingCheck,
+        new FakeUsedDiskSpaceCheck,
     ]);
 
     artisan(RunHealthChecksCommand::class)
@@ -123,4 +126,23 @@ it('has an option that will let the command fail when a check fails', function (
 
     artisan('health:check')->assertSuccessful();
     artisan('health:check --fail-command-on-failing-check')->assertFailed();
+});
+
+it('does not perform checks if checks are paused', function () {
+    $mockRepository = Mockery::mock(Repository::class);
+
+    $mockRepository->shouldReceive('get')
+        ->once()
+        ->with(PauseHealthChecksCommand::CACHE_KEY)
+        ->andReturn(true);
+
+    Cache::swap($mockRepository);
+
+    Cache::shouldReceive('driver')->andReturn($mockRepository);
+
+    artisan('health:check')->assertSuccessful()->expectsOutput('Checks paused');
+
+    $historyItems = HealthCheckResultHistoryItem::get();
+
+    expect($historyItems)->toHaveCount(0);
 });

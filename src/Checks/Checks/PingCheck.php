@@ -10,9 +10,18 @@ use Spatie\Health\Exceptions\InvalidCheck;
 
 class PingCheck extends Check
 {
-    public ?string $url = null;
-    public ?string $failureMessage = null;
-    public int $timeout = 1;
+    protected ?string $url = null;
+
+    protected ?string $failureMessage = null;
+
+    protected int $timeout = 1;
+
+    protected int $retryTimes = 1;
+
+    protected string $method = 'GET';
+
+    /** @var array<string, string> */
+    protected array $headers = [];
 
     public function url(string $url): self
     {
@@ -28,6 +37,31 @@ class PingCheck extends Check
         return $this;
     }
 
+    public function method(string $method): self
+    {
+        $this->method = $method;
+
+        return $this;
+    }
+
+    public function retryTimes(int $times): self
+    {
+        $this->retryTimes = $times;
+
+        return $this;
+    }
+
+    /**
+     * @param  array<string, string>  $headers
+     * @return $this
+     */
+    public function headers(array $headers = []): self
+    {
+        $this->headers = $headers;
+
+        return $this;
+    }
+
     public function failureMessage(string $failureMessage): self
     {
         $this->failureMessage = $failureMessage;
@@ -38,11 +72,18 @@ class PingCheck extends Check
     public function run(): Result
     {
         if (is_null($this->url)) {
-            throw InvalidCheck::urlNotSet();
+            return Result::make()
+                ->failed()
+                ->shortSummary(InvalidCheck::urlNotSet()->getMessage());
         }
 
         try {
-            if (! Http::timeout($this->timeout)->get($this->url)->successful()) {
+            $request = Http::timeout($this->timeout)
+                ->withHeaders($this->headers)
+                ->retry($this->retryTimes)
+                ->send($this->method, $this->url);
+
+            if (! $request->successful()) {
                 return $this->failedResult();
             }
         } catch (Exception) {
@@ -51,14 +92,14 @@ class PingCheck extends Check
 
         return Result::make()
             ->ok()
-            ->shortSummary('reachable');
+            ->shortSummary('Reachable');
     }
 
     protected function failedResult(): Result
     {
         return Result::make()
             ->failed()
-            ->shortSummary('unreachable')
+            ->shortSummary('Unreachable')
             ->notificationMessage($this->failureMessage ?? "Pinging {$this->getName()} failed.");
     }
 }

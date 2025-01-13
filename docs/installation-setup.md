@@ -86,7 +86,7 @@ return [
         ],
 
         'slack' => [
-            'webhook_url' => config('logging.channels.slack.url', ''),
+            'webhook_url' => env('HEALTH_SLACK_WEBHOOK_URL', ''),
 
             /*
              * If this is set to null the default channel of the webhook will be used.
@@ -131,6 +131,12 @@ return [
      * - dark: dark mode
      */
     'theme' => 'light',
+    
+    /*
+     * When enabled,  completed `HealthQueueJob`s will be displayed 
+     * in Horizon's silenced jobs screen.
+     */
+    'silence_health_queue_job' => true,
 ];
 ```
 
@@ -150,14 +156,12 @@ These steps are not necessary when using the `JsonFileResultStore`.
 If you want to let your application send notifications when something is wrong, you should schedule the `RunHealthChecksCommand` to run every minute.
 
 ```php
-// in app/Console/Kernel.php
+// in route/console.php
+use Illuminate\Support\Facades\Schedule;
 
-protected function schedule(Schedule $schedule)
-{
-    $schedule->command(\Spatie\Health\Commands\RunHealthChecksCommand::class)->everyMinute();
-}
+Schedule::command(\Spatie\Health\Commands\RunHealthChecksCommand::class)->everyMinute();
 ```
 
 ## Running the checks by sending HTTP requests
 
-If you don't want let your application send notification, but let a service like Oh Dear monitor the health of your app, you can trigger a run of all health checks by visiting the [HTTP endpoint](https://spatie.be/docs/laravel-health/v1/viewing-results/on-a-webpage) or [JSON endpoint](https://spatie.be/docs/laravel-health/v1/viewing-results/as-json) and use the `?fresh` parameter in the URL.
+If you don't want to let your application send notification, but let a service like Oh Dear monitor the health of your app, you can trigger a run of all health checks by visiting the [HTTP endpoint](https://spatie.be/docs/laravel-health/v1/viewing-results/on-a-webpage) or [JSON endpoint](https://spatie.be/docs/laravel-health/v1/viewing-results/as-json) and use the `?fresh` parameter in the URL.

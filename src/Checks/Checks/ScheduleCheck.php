@@ -3,12 +3,13 @@
 namespace Spatie\Health\Checks\Checks;
 
 use Carbon\Carbon;
+use Composer\InstalledVersions;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
 
 class ScheduleCheck extends Check
 {
-    protected string $cacheKey = 'health.checks.schedule.latestHeartbeatAt';
+    protected string $cacheKey = 'health:checks:schedule:latestHeartbeatAt';
 
     protected ?string $cacheStoreName = null;
 
@@ -47,8 +48,7 @@ class ScheduleCheck extends Check
 
     public function run(): Result
     {
-        $result = Result::make()
-            ->ok();
+        $result = Result::make()->ok();
 
         $lastHeartbeatTimestamp = cache()->store($this->cacheStoreName)->get($this->cacheKey);
 
@@ -58,7 +58,14 @@ class ScheduleCheck extends Check
 
         $latestHeartbeatAt = Carbon::createFromTimestamp($lastHeartbeatTimestamp);
 
-        $minutesAgo = $latestHeartbeatAt->diffInMinutes() + 1;
+        $carbonVersion = InstalledVersions::getVersion('nesbot/carbon');
+
+        $minutesAgo = $latestHeartbeatAt->diffInMinutes();
+
+        if (version_compare($carbonVersion,
+            '3.0.0', '<')) {
+            $minutesAgo += 1;
+        }
 
         if ($minutesAgo > $this->heartbeatMaxAgeInMinutes) {
             return $result->failed("The last run of the schedule was more than {$minutesAgo} minutes ago.");

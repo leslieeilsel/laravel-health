@@ -5,6 +5,7 @@ namespace Spatie\Health\Commands;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Spatie\Health\Checks\Check;
 use Spatie\Health\Checks\Result;
 use Spatie\Health\Enums\Status;
@@ -12,30 +13,35 @@ use Spatie\Health\Events\CheckEndedEvent;
 use Spatie\Health\Events\CheckStartingEvent;
 use Spatie\Health\Exceptions\CheckDidNotComplete;
 use Spatie\Health\Health;
-use Spatie\Health\Notifications\CheckFailedNotification;
 use Spatie\Health\ResultStores\ResultStore;
 
 class RunHealthChecksCommand extends Command
 {
-    public $signature = 'health:check {--do-not-store-results} {--no-notification} {--fail-command-on-failing-check}';
+    protected $signature = 'health:check {--do-not-store-results} {--no-notification} {--fail-command-on-failing-check}';
 
-    public $description = 'Run all health checks';
+    protected $description = 'Run all health checks';
 
     /** @var array<int, Exception> */
     protected array $thrownExceptions = [];
 
     public function handle(): int
     {
+        if (Cache::get(PauseHealthChecksCommand::CACHE_KEY)) {
+            $this->info('Checks paused');
+
+            return self::SUCCESS;
+        }
+
         $this->info('Running checks...');
 
         $results = $this->runChecks();
 
-        if (! $this->option('do-not-store-results')) {
-            $this->storeResults($results);
+        if (! $this->option('no-notification') && config('health.notifications.enabled', false)) {
+            $this->sendNotification($results);
         }
 
-        if (! $this->option('no-notification')) {
-            $this->sendNotification($results);
+        if (! $this->option('do-not-store-results')) {
+            $this->storeResults($results);
         }
 
         $this->line('');
@@ -80,11 +86,11 @@ class RunHealthChecksCommand extends Command
             ->map(function (Check $check): Result {
                 return $check->shouldRun()
                     ? $this->runCheck($check)
-                    : (new Result(Status::skipped()))->check($check);
+                    : (new Result(Status::skipped()))->check($check)->endedAt(now());
             });
     }
 
-    /** @param Collection<int, Result> $results */
+    /** @param  Collection<int, Result>  $results */
     protected function storeResults(Collection $results): self
     {
         app(Health::class)
@@ -105,13 +111,14 @@ class RunHealthChecksCommand extends Command
         $notifiableClass = config('health.notifications.notifiable');
 
         /** @var \Spatie\Health\Notifications\Notifiable $notifiable */
-
         $notifiable = app($notifiableClass);
 
         /** @var array<int, Result> $results */
         $results = $resultsWithMessages->toArray();
 
-        $notification = (new CheckFailedNotification($results));
+        $failedNotificationClass = $this->getFailedNotificationClass();
+
+        $notification = (new $failedNotificationClass($results));
 
         $notifiable->notify($notification);
 
@@ -120,7 +127,7 @@ class RunHealthChecksCommand extends Command
 
     protected function outputResult(Result $result, ?Exception $exception = null): void
     {
-        $status = ucfirst((string)$result->status->value);
+        $status = ucfirst((string) $result->status->value);
 
         $okMessage = $status;
 
@@ -132,7 +139,7 @@ class RunHealthChecksCommand extends Command
             Status::ok() => $this->info($okMessage),
             Status::warning() => $this->comment("{$status}: {$result->getNotificationMessage()}"),
             Status::failed() => $this->error("{$status}: {$result->getNotificationMessage()}"),
-            Status::crashed() => $this->error("{$status}}: `{$exception?->getMessage()}`"),
+            Status::crashed() => $this->error("{$status}: `{$exception?->getMessage()}`"),
             default => null,
         };
     }
@@ -158,5 +165,13 @@ class RunHealthChecksCommand extends Command
         return $containsFailingCheck
             ? self::FAILURE
             : self::SUCCESS;
+    }
+
+    /**
+     * @return class-string
+     */
+    protected function getFailedNotificationClass(): string
+    {
+        return array_key_first(config('health.notifications.notifications'));
     }
 }

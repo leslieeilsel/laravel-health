@@ -30,24 +30,28 @@ class CacheCheck extends Check
         try {
             return $this->canWriteValuesToCache($driver)
                 ? $result->ok()
-                : $result->failed("Could not set or retrieve an application cache value.");
+                : $result->failed('Could not set or retrieve an application cache value.');
         } catch (Exception $exception) {
             return $result->failed("An exception occurred with the application cache: `{$exception->getMessage()}`");
         }
     }
 
-    protected function defaultDriver(): string
+    protected function defaultDriver(): ?string
     {
         return config('cache.default', 'file');
     }
 
-    protected function canWriteValuesToCache(string $driver): bool
+    protected function canWriteValuesToCache(?string $driver): bool
     {
         $expectedValue = Str::random(5);
 
-        Cache::driver($driver)->put('laravel-health:check', $expectedValue, 10);
+        $cacheName = "laravel-health:check-{$expectedValue}";
 
-        $actualValue = Cache::driver($driver)->get('laravel-health:check');
+        Cache::driver($driver)->put($cacheName, $expectedValue, 10);
+
+        $actualValue = Cache::driver($driver)->get($cacheName);
+
+        Cache::driver($driver)->forget($cacheName);
 
         return $actualValue === $expectedValue;
     }

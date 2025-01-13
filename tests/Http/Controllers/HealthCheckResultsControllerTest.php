@@ -1,12 +1,13 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use function Pest\Laravel\artisan;
-use function Pest\Laravel\get;
 use Spatie\Health\Commands\RunHealthChecksCommand;
 use Spatie\Health\Facades\Health;
 use Spatie\Health\Http\Controllers\HealthCheckResultsController;
 use Spatie\Health\Tests\TestClasses\FakeUsedDiskSpaceCheck;
+
+use function Pest\Laravel\artisan;
+use function Pest\Laravel\get;
 use function Spatie\PestPluginTestTime\testTime;
 
 beforeEach(function () {
@@ -31,8 +32,8 @@ it('can display the results as html', function () {
 });
 
 it('will run the checks when the run get parameter is passed and return the results as json', function () {
-    get('/?fresh')
-        ->assertSuccessful()
-        ->assertViewIs('health::list')
-        ->assertSee($this->check->getLabel());
-});
+get('/?fresh')
+->assertSuccessful()
+->assertViewIs('health::list')
+->assertSee($this->check->getLabel());
+    });

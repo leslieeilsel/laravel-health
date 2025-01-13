@@ -24,7 +24,7 @@ class HealthCheckResultHistoryItem extends Model
     use HasFactory;
     use MassPrunable;
 
-    public $guarded = [];
+    protected $guarded = [];
 
     /** @var array<string,string> */
     public $casts = [
@@ -32,9 +32,16 @@ class HealthCheckResultHistoryItem extends Model
         'started_failing_at' => 'timestamp',
     ];
 
+    public function getConnectionName(): string
+    {
+        return $this->connection ?:
+            config('health.result_stores.'.EloquentHealthResultStore::class.'.connection') ?:
+            config('database.default');
+    }
+
     public function prunable(): Builder
     {
-        $days = config('health.result_stores.'  . EloquentHealthResultStore::class.  '.keep_history_for_days') ?? 5;
+        $days = config('health.result_stores.'.EloquentHealthResultStore::class.'.keep_history_for_days') ?? 5;
 
         return static::where('created_at', '<=', now()->subDays($days));
     }
